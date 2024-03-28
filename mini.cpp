@@ -13,6 +13,8 @@
 #include <QMap>
 #include <QTableWidget>
 
+#include "NombreJoueurPage.h"
+
 struct PlayerInfo {
     QColor color;
     int gamesWon;
@@ -45,10 +47,15 @@ int main(int argc, char *argv[])
             inputNumberJoueur.setFixedWidth(200);
             inputNumberJoueur.setStyleSheet("border: 1px solid white; border-radius: 50px; color: #FFFFFF");
 
+            // Ajouter un validateur pour n'accepter que les entiers
+            QIntValidator *validator = new QIntValidator(&inputNumberJoueur);
+            inputNumberJoueur.setValidator(validator);
+
             // Création du bouton
             QPushButton suivantNumberJoueur("Suivant");
             suivantNumberJoueur.setFixedWidth(200);
-            suivantNumberJoueur.setStyleSheet("border: 1px solid white; border-radius: 50px; background-color: #FCA311");
+            suivantNumberJoueur.setStyleSheet("border: 1px solid white; border-radius: 50px; background-color: #E5E5E5; color: #000000;");
+            suivantNumberJoueur.setEnabled(false);
 
             layoutNumberJoueur.addWidget(&titleNumberJoueur, 0, Qt::AlignVCenter | Qt::AlignHCenter);
             QHBoxLayout centerLayoutNumberJoueur;
@@ -167,6 +174,15 @@ int main(int argc, char *argv[])
             for (int col = 0; col < 4; ++col) {
                 tableauJouerPartie.setColumnWidth(col, 600 / 4); // Divisez la largeur fixe par le nombre de colonnes pour obtenir la largeur de chaque colonne
             }
+            // Rendre les cellules du tableau non éditables
+            for (int row = 0; row < tableauJouerPartie.rowCount(); ++row) {
+                for (int col = 0; col < tableauJouerPartie.columnCount(); ++col) {
+                    QTableWidgetItem *item = tableauJouerPartie.item(row, col);
+                    if (item) {
+                        item->setFlags(item->flags() & ~Qt::ItemIsEditable);
+                    }
+                }
+            }
             layoutJouerPartie.addWidget(&titleJouerPartie, 0, Qt::AlignVCenter | Qt::AlignHCenter);
             layoutJouerPartie.addWidget(&tableauJouerPartie, Qt::AlignVCenter | Qt::AlignHCenter);
 
@@ -195,6 +211,16 @@ int main(int argc, char *argv[])
     enregistrerPseudo.setStyleSheet("border: 1px solid white; border-radius: 50px; background-color: #FCA311; color: #000000;");
     enregistrerPseudo.setEnabled(true);
     int nextPlayerIndex = 0; // Variable pour suivre le numéro du prochain joueur
+
+    QObject::connect(&inputNumberJoueur, &QLineEdit::textChanged, [&suivantNumberJoueur](const QString &text) {
+        if (text.isEmpty()) {
+                suivantNumberJoueur.setEnabled(false);
+                suivantNumberJoueur.setStyleSheet("border: 1px solid white; border-radius: 50px; background-color: #E5E5E5; color: #000000;");
+            } else {
+                suivantNumberJoueur.setEnabled(true);
+                suivantNumberJoueur.setStyleSheet("border: 1px solid white; border-radius: 50px; background-color: #FCA311;");
+            }
+    });
 
     // Connecter le clic sur le bouton "Suivant" pour passer à la nouvelle page
     QObject::connect(&suivantNumberJoueur, &QPushButton::clicked, [&stackedWidget]() {

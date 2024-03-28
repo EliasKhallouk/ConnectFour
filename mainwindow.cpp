@@ -196,7 +196,7 @@ void MainWindow::onButtonClicked(QGraphicsScene *scene)
         int column = senderButton->text().toInt() - 1;
         qDebug() << column;
 
-        if (tab[0][column] == 0) {
+        if (tab[0][column] == 0 ) {
             place(column);
             refreshScene(scene);
         }
