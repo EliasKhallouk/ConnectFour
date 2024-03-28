@@ -13,8 +13,7 @@
 #include <QMap>
 #include <QTableWidget>
 
-#include "NombreJoueurPage.h"
-
+#include "mainwindow.h"
 struct PlayerInfo {
     QColor color;
     int gamesWon;
@@ -147,49 +146,33 @@ int main(int argc, char *argv[])
 
 
     // MISE EN PAGE JOUER DE PARTIE
-    QVBoxLayout layoutJouerPartie;
+    QVBoxLayout layoutTableau;
             // Création du titre
-            QLabel titleJouerPartie("Jouer la partie");
-            titleFont = titleJouerPartie.font();
+            QLabel titleTableau("Jouer la partie");
+            titleFont = titleTableau.font();
             titleFont.setPointSize(24);
-            titleJouerPartie.setFont(titleFont);
-            titleJouerPartie.setStyleSheet("color: #FFFFFF;");
+            titleTableau.setFont(titleFont);
+            titleTableau.setStyleSheet("color: #FFFFFF;");
 
             // Création du tableau pour afficher les données
-            QTableWidget tableauJouerPartie(0, 4); // 4 colonnes
-            tableauJouerPartie.setHorizontalHeaderLabels(QStringList() << "PSEUDO" << "PARTIE GAGNER" << "PARTIE PERDU" << "TOTAL POINT");
+            QTableWidget tableauScore(0, 4); // 4 colonnes
+            tableauScore.setHorizontalHeaderLabels(QStringList() << "PSEUDO" << "PARTIE GAGNER" << "PARTIE PERDU" << "TOTAL POINT");
 
-            // Ajoutez les pseudos dans la première colonne
-            for (int i = 0; i < pseudoList.size(); ++i) {
-                tableauJouerPartie.insertRow(i);
-                tableauJouerPartie.setItem(i, 0, new QTableWidgetItem(pseudoList[i]));
-                // Remplissez les autres cellules avec des zéros
-                for (int j = 1; j < 4; ++j) {
-                    tableauJouerPartie.setItem(i, j, new QTableWidgetItem("0"));
-                }
-            }
+            // Création du bouton
+            QPushButton suivantTableau("Suivant");
+            suivantTableau.setFixedWidth(200);
+            suivantTableau.setStyleSheet("border: 1px solid white; border-radius: 50px; background-color: #FCA311");
 
-            // Redimensionner les colonnes pour s'adapter au contenu
-            //tableauJouerPartie.resizeColumnsToContents();
-            for (int col = 0; col < 4; ++col) {
-                tableauJouerPartie.setColumnWidth(col, 600 / 4); // Divisez la largeur fixe par le nombre de colonnes pour obtenir la largeur de chaque colonne
-            }
-            // Rendre les cellules du tableau non éditables
-            for (int row = 0; row < tableauJouerPartie.rowCount(); ++row) {
-                for (int col = 0; col < tableauJouerPartie.columnCount(); ++col) {
-                    QTableWidgetItem *item = tableauJouerPartie.item(row, col);
-                    if (item) {
-                        item->setFlags(item->flags() & ~Qt::ItemIsEditable);
-                    }
-                }
-            }
-            layoutJouerPartie.addWidget(&titleJouerPartie, 0, Qt::AlignVCenter | Qt::AlignHCenter);
-            layoutJouerPartie.addWidget(&tableauJouerPartie, Qt::AlignVCenter | Qt::AlignHCenter);
+            layoutTableau.addWidget(&titleTableau, 0, Qt::AlignVCenter | Qt::AlignHCenter);
+            layoutTableau.addWidget(&tableauScore, Qt::AlignVCenter | Qt::AlignHCenter);
+            layoutTableau.addWidget(&suivantTableau, 0, Qt::AlignVCenter | Qt::AlignHCenter);
+
+
 
             // Création du widget principal pour la page de choix du temps de partie
-            QWidget pageJouerPartie;
-            pageJouerPartie.setLayout(&layoutJouerPartie);
-            pageJouerPartie.setStyleSheet("background-color: #14213D;");
+            QWidget pageTableau;
+            pageTableau.setLayout(&layoutTableau);
+            pageTableau.setStyleSheet("background-color: #14213D;");
 
 
 
@@ -199,7 +182,7 @@ int main(int argc, char *argv[])
     stackedWidget.addWidget(&pageNumberJoueur);  // Ajout de la page principale
     stackedWidget.addWidget(&pageTempPartie);    // Ajout de la deuxième page
     stackedWidget.addWidget(&pagePseudo);        // Ajout de la troisième page
-    stackedWidget.addWidget(&pageJouerPartie);  // Ajout de la quatrième page
+    stackedWidget.addWidget(&pageTableau);  // Ajout de la quatrième page
     stackedWidget.setCurrentWidget(&pageNumberJoueur);  // Définir la page principale comme étant celle affichée initialement
     stackedWidget.resize(700, 700);
     stackedWidget.setWindowTitle("Connect Four");
@@ -230,6 +213,15 @@ int main(int argc, char *argv[])
     // Connecter le clic sur le bouton "Suivant" pour passer à la pagePseudo
     QObject::connect(&suivantTempPartie, &QPushButton::clicked, [&stackedWidget]() {
         stackedWidget.setCurrentIndex(2);  // Passer à la troisième page (index 2)
+    });
+
+    // Connecter le clic sur le bouton "Suivant" pour passer à la page suivante
+    QObject::connect(&suivantPseudo, &QPushButton::clicked, [&stackedWidget]() {
+        stackedWidget.setCurrentIndex(3);  // Passer à la page suivante
+    });
+
+    QObject::connect(&suivantTableau, &QPushButton::clicked, [&stackedWidget]() {
+        stackedWidget.setCurrentIndex(4);
     });
 
     // Connecter le clic sur le bouton pour choisir la couleur
@@ -268,7 +260,7 @@ int main(int argc, char *argv[])
 
     // Connecter le clic sur le bouton "Enregistrer Pseudo"
    // Connecter le clic sur le bouton "Enregistrer Pseudo"
-   QObject::connect(&enregistrerPseudo, &QPushButton::clicked, [&layoutPseudo,&pseudoList, &inputPseudo, &nextPlayerIndex, &totalPlayers, &suivantPseudo, &enregistrerPseudo, &tableauJouerPartie, &playerInfoMap, &chooseColorButton]() {
+   QObject::connect(&enregistrerPseudo, &QPushButton::clicked, [&layoutPseudo,&pseudoList, &inputPseudo, &nextPlayerIndex, &totalPlayers, &suivantPseudo, &enregistrerPseudo, &tableauScore, &playerInfoMap, &chooseColorButton]() {
        if (pseudoList.size() >= totalPlayers) {
            return; // Ne rien faire si le nombre maximal de pseudos est atteint
        }
@@ -305,9 +297,9 @@ int main(int argc, char *argv[])
        nextPlayerIndex++;
 
        // Ajouter une ligne pour ce pseudo dans le tableau
-       int row = tableauJouerPartie.rowCount();
-       tableauJouerPartie.insertRow(row);
-       tableauJouerPartie.setItem(row, 0, new QTableWidgetItem(pseudo));
+       int row = tableauScore.rowCount();
+       tableauScore.insertRow(row);
+       tableauScore.setItem(row, 0, new QTableWidgetItem(pseudo));
 
        // Remplir les autres cellules avec les informations du joueur
        QTableWidgetItem *gamesWonItem = new QTableWidgetItem(QString::number(playerInfo.gamesWon));
@@ -319,13 +311,13 @@ int main(int argc, char *argv[])
        gamesLostItem->setFlags(gamesLostItem->flags() ^ Qt::ItemIsEditable);
        totalPointsItem->setFlags(totalPointsItem->flags() ^ Qt::ItemIsEditable);
 
-       tableauJouerPartie.setItem(row, 1, gamesWonItem);
-       tableauJouerPartie.setItem(row, 2, gamesLostItem);
-       tableauJouerPartie.setItem(row, 3, totalPointsItem);
+       tableauScore.setItem(row, 1, gamesWonItem);
+       tableauScore.setItem(row, 2, gamesLostItem);
+       tableauScore.setItem(row, 3, totalPointsItem);
 
        // Définir la couleur de fond de toute la ligne avec la couleur du pseudo
        for (int col = 0; col < 4; ++col) {
-           QTableWidgetItem *item = tableauJouerPartie.item(row, col);
+           QTableWidgetItem *item = tableauScore.item(row, col);
            if (item) {
                item->setBackground(pseudoColor);
            }
@@ -349,10 +341,7 @@ int main(int argc, char *argv[])
 
 
 
-    // Connecter le clic sur le bouton "Suivant" pour passer à la page suivante
-    QObject::connect(&suivantPseudo, &QPushButton::clicked, [&stackedWidget]() {
-        stackedWidget.setCurrentIndex(3);  // Passer à la page suivante
-    });
+
 
 
     // Centrer la fenêtre sur l'écran
