@@ -303,7 +303,7 @@ bool place(int column) {
         w2 = (idPlayer == 2) ? ++w2 : w2;
         QMessageBox msgBox;
         msgBox.setWindowTitle(QString::number(rnd));
-        msgBox.setText("Congratulation !");
+        msgBox.setText("Bravo ! tu a gagné la manche "+QString::number(rnd));
         msgBox.resize(400, 200);
         msgBox.exec();
         rnd++;
@@ -462,7 +462,7 @@ int main(int argc, char *argv[])
     // MISE EN PAGE JOUER DE PARTIE
     QVBoxLayout layoutTableau;
     // Création du titre
-    QLabel titleTableau("Jouer la partie");
+    QLabel titleTableau("Tableau des scores");
     titleFont = titleTableau.font();
     titleFont.setPointSize(24);
     titleTableau.setFont(titleFont);
