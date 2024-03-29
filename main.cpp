@@ -16,20 +16,26 @@
 #include <QGraphicsView>
 #include <QGraphicsEllipseItem>
 #include <QGraphicsProxyWidget>
-
 #include <QBrush>
 #include <QPen>
 #include <QDebug>
 #include <QMessageBox>
+#include <QTimer>
+#include <vector>
+#include <utility>
+#include <algorithm>
+#include <random>
+using namespace std;
 
 //#include "mainwindow.h"
 struct PlayerInfo {
+    QString pseudo;
     QColor color;
     int gamesWon;
     int gamesLost;
+    int gamesEqualities;
     int totalPoints;
 
-    // Méthode pour définir la couleur
     void setColor(const QColor &newColor) {
         color = newColor;
     }
@@ -42,6 +48,9 @@ const int cellSize = 50;
 
 int tab[ROWS][COLS];
 
+PlayerInfo player1;
+PlayerInfo player2;
+
 int idPlayer = 1;
 
 int t1 = 21;
@@ -52,10 +61,48 @@ int w2 = 0;
 
 int rnd = 1;
 
+int nMatch = 0;
+
+QTimer timer;
+
+int minutes;
+
+vector<pair<int, int>> matchPlanning;
+
+QColor colorJ1 = (Qt::blue);
+QColor colorJ2 = (Qt::red);
+
+//QLabel *labelTimer;
+
+std::vector<PlayerInfo> playersList;
+
+vector<pair<int, int>> generatePlanning(int n) {
+    vector<pair<int, int>> pairs;
+    for (int i = 0; i < n; ++i) {
+        for (int j = i+1; j < n; ++j) {
+            if (j > i) {
+                pairs.push_back(make_pair(j, i));
+            }
+            else {
+                pairs.push_back(make_pair(i, j));
+            }
+        }
+    }
+    random_device rd;
+    mt19937 g(rd());
+    shuffle(pairs.begin(), pairs.end(), g);
+    return pairs;
+}
+
+void initGame(PlayerInfo p1, PlayerInfo p2) {
+    colorJ1 = p1.color;
+    colorJ2 = p2.color;
+}
+
 void reset() {
     t1 = 21;
     t2 = 21;
-    idPlayer = 2;
+    idPlayer = (idPlayer == 1) ? 2 : 1;
     for (int i = 0; i < ROWS; ++i) {
         for (int j = 0; j < COLS; ++j) {
             tab[i][j] = 0;
@@ -63,16 +110,24 @@ void reset() {
     }
 }
 
+void resetGame() {
+    rnd = 1;
+    idPlayer = 1;
+    w1 = 0;
+    w2 = 0;
+    reset();
+}
+
 void refreshScene(QGraphicsScene *scene) {
     for (int i = 0; i < ROWS; ++i) {
         for (int j = 0; j < COLS; ++j) {
             if(tab[i][j] == 1) {
                 QGraphicsEllipseItem *circle = new QGraphicsEllipseItem(j * cellSize, i * cellSize, cellSize, cellSize);
-                circle->setBrush(QBrush(Qt::blue));
+                circle->setBrush(QBrush(colorJ1));
                 scene->addItem(circle);
             } else if (tab[i][j] == 2) {
                 QGraphicsEllipseItem *circle = new QGraphicsEllipseItem(j * cellSize, i * cellSize, cellSize, cellSize);
-                circle->setBrush(QBrush(Qt::red));
+                circle->setBrush(QBrush(colorJ2));
                 scene->addItem(circle);
             }
             else {
@@ -86,11 +141,11 @@ void refreshScene(QGraphicsScene *scene) {
     int circleSpacing = 20;
 
     QGraphicsEllipseItem *leftCircle = new QGraphicsEllipseItem(-cellSize - circleSpacing, ROWS * cellSize / 2 - cellSize / 2, cellSize, cellSize);
-    leftCircle->setBrush(QBrush(Qt::blue));
+    leftCircle->setBrush(QBrush(colorJ1));
     scene->addItem(leftCircle);
 
     QGraphicsEllipseItem *rightCircle = new QGraphicsEllipseItem(COLS * cellSize + circleSpacing, ROWS * cellSize / 2 - cellSize / 2, cellSize, cellSize);
-    rightCircle->setBrush(QBrush(Qt::red));
+    rightCircle->setBrush(QBrush(colorJ2));
     scene->addItem(rightCircle);
 
     QFont boldFont("Arial", 12, QFont::Bold);
@@ -108,11 +163,11 @@ void refreshScene(QGraphicsScene *scene) {
     scene->addItem(textRightCircle);
 
     QGraphicsEllipseItem *topLeftCircle1 = new QGraphicsEllipseItem(0, -2*cellSize - circleSpacing, cellSize - 2, cellSize - 2);
-    topLeftCircle1->setBrush(QBrush(Qt::blue));
+    topLeftCircle1->setBrush(QBrush(colorJ1));
     scene->addItem(topLeftCircle1);
 
     QGraphicsEllipseItem *topLeftCircle2 = new QGraphicsEllipseItem(cellSize, -2*cellSize - circleSpacing, cellSize - 2, cellSize - 2);
-    topLeftCircle2->setBrush(QBrush(Qt::blue));
+    topLeftCircle2->setBrush(QBrush(colorJ1));
     scene->addItem(topLeftCircle2);
 
     QGraphicsEllipseItem *topLeftCircle1bis = nullptr;
@@ -135,7 +190,7 @@ void refreshScene(QGraphicsScene *scene) {
         break;
 
     case 3:
-        qDebug() << "Blue wins";
+        qDebug() << "1 wins";
         break;
 
     default:
@@ -144,11 +199,11 @@ void refreshScene(QGraphicsScene *scene) {
     }
 
     QGraphicsEllipseItem *topRightCircle1 = new QGraphicsEllipseItem((COLS-1) * cellSize, -2*cellSize - circleSpacing, cellSize - 2, cellSize - 2);
-    topRightCircle1->setBrush(QBrush(Qt::red));
+    topRightCircle1->setBrush(QBrush(colorJ2));
     scene->addItem(topRightCircle1);
 
     QGraphicsEllipseItem *topRightCircle2 = new QGraphicsEllipseItem((COLS-2) * cellSize, -2*cellSize - circleSpacing, cellSize - 2, cellSize - 2);
-    topRightCircle2->setBrush(QBrush(Qt::red));
+    topRightCircle2->setBrush(QBrush(colorJ2));
     scene->addItem(topRightCircle2);
 
     QGraphicsEllipseItem *topRightCircle1bis = nullptr;
@@ -170,13 +225,19 @@ void refreshScene(QGraphicsScene *scene) {
         scene->addItem(topRightCircle2bis);
 
     case 3:
-        qDebug() << "Red wins";
+        qDebug() << "2 wins";
         break;
 
     default:
         qDebug() << "Miku";
         break;
     }
+    
+    QLabel *label = new QLabel("Hello, World!");
+    
+    // Création du proxy widget pour le label
+    QGraphicsProxyWidget *proxy = new QGraphicsProxyWidget;
+    proxy->setWidget(label);
 }
 
 bool isVictory(int x, int y) {
@@ -261,11 +322,16 @@ bool place(int column) {
         w2 = (idPlayer == 2) ? ++w2 : w2;
         QMessageBox msgBox;
         msgBox.setWindowTitle(QString::number(rnd));
-        msgBox.setText(" Bravo !"+QString::number(idPlayer));
+        msgBox.setText("Congratulation !");
         msgBox.resize(400, 200);
         msgBox.exec();
-        reset();
-        rnd+=1;
+        rnd++;
+        if (w1 == 2 || w2 == 2) {
+            return true;
+        }
+        else {
+            reset();
+        }
     }
     else if (t2 == 0){
         QMessageBox msgBox;
@@ -275,8 +341,13 @@ bool place(int column) {
         msgBox.setText("Equality");
         msgBox.resize(400, 200);
         msgBox.exec();
-        reset();
-        rnd+=1;
+        rnd++;
+        if (w1 == 2 || w2 == 2) {
+            return true;
+        }
+        else {
+            reset();
+        }
     }
     else {
         t1 = (idPlayer == 1) ? --t1 : t1;
@@ -285,7 +356,7 @@ bool place(int column) {
         idPlayer = (idPlayer == 1) ? 2 : 1;
     }
 
-    return isVictory(ROWS - 1 - i, column);
+    return false;
 }
 
 int main(int argc, char *argv[])
@@ -294,25 +365,20 @@ int main(int argc, char *argv[])
     QStringList pseudoList;
     QMap<QString, PlayerInfo> playerInfoMap;
 
-    // MISE EN PAGE NOMBRE JOUEUR
     QVBoxLayout layoutNumberJoueur;
-    // Création du titre
     QLabel titleNumberJoueur("Choisissez le nombre de joueur");
     QFont titleFont = titleNumberJoueur.font();
     titleFont.setPointSize(24);
     titleNumberJoueur.setFont(titleFont);
     titleNumberJoueur.setStyleSheet("color: #14213D;");
 
-    // Création du champ d'entrée
     QLineEdit inputNumberJoueur;
     inputNumberJoueur.setFixedWidth(200);
     inputNumberJoueur.setStyleSheet("border: 1px solid white; border-radius: 50px; color: #14213D");
 
-    // Ajouter un validateur pour n'accepter que les entiers
     QIntValidator *validator = new QIntValidator(&inputNumberJoueur);
     inputNumberJoueur.setValidator(validator);
 
-    // Création du bouton
     QPushButton suivantNumberJoueur("Suivant");
     suivantNumberJoueur.setFixedWidth(200);
     suivantNumberJoueur.setStyleSheet("border: 1px solid white; border-radius: 50px; background-color: #E5E5E5; color: #000000;");
@@ -324,22 +390,18 @@ int main(int argc, char *argv[])
     centerLayoutNumberJoueur.addWidget(&suivantNumberJoueur, 0, Qt::AlignHCenter | Qt::AlignVCenter);
     layoutNumberJoueur.addLayout(&centerLayoutNumberJoueur);
 
-    // Création du widget principal pour la page de choix du nombre de joueurs
     QWidget pageNumberJoueur;
     pageNumberJoueur.setLayout(&layoutNumberJoueur);
     pageNumberJoueur.setStyleSheet("background-color: #A6B9E2;");
 
 
-    // MISE EN PAGE TEMPS DE PARTIE
     QVBoxLayout layoutTempPartie;
-    // Création du titre
     QLabel titleTempPartie("Choisissez le temps de partie");
     titleFont = titleTempPartie.font();
     titleFont.setPointSize(24);
     titleTempPartie.setFont(titleFont);
     titleTempPartie.setStyleSheet("color: #14213D;");
 
-    // Création du champ d'entrée
     QComboBox comboBoxTempPartie;
     comboBoxTempPartie.setFixedWidth(200);
     comboBoxTempPartie.addItem("3 minutes");
@@ -347,7 +409,6 @@ int main(int argc, char *argv[])
     comboBoxTempPartie.addItem("10 minutes");
     comboBoxTempPartie.setStyleSheet("border: 1px solid white; border-radius: 50px; color: #14213D");
 
-    // Création du bouton
     QPushButton suivantTempPartie("Suivant");
     suivantTempPartie.setFixedWidth(200);
     suivantTempPartie.setStyleSheet("border: 1px solid white; border-radius: 50px; background-color: #FCA311");
@@ -358,37 +419,29 @@ int main(int argc, char *argv[])
     centerLayoutTempPartie.addWidget(&suivantTempPartie, 0, Qt::AlignHCenter | Qt::AlignVCenter);
     layoutTempPartie.addLayout(&centerLayoutTempPartie);
 
-    // Création du widget principal pour la page de choix du temps de partie
     QWidget pageTempPartie;
     pageTempPartie.setLayout(&layoutTempPartie);
     pageTempPartie.setStyleSheet("background-color: #A6B9E2;");
 
-
-    // MISE EN PAGE PSEUDO
     QVBoxLayout layoutPseudo;
-    // Création du titre
     QLabel titlePseudo("Choisissez le pseudo et la couleur");
     titleFont = titlePseudo.font();
     titleFont.setPointSize(24);
     titlePseudo.setFont(titleFont);
     titlePseudo.setStyleSheet("color: #14213D;");
 
-    // Création du champ d'entrée pour le pseudo
     QLineEdit inputPseudo;
     inputPseudo.setFixedWidth(200);
     inputPseudo.setStyleSheet("border: 1px solid white; border-radius: 50px; color: #14213D");
 
-    // Création du bouton pour choisir la couleur
     QPushButton chooseColorButton("Choisir une couleur");
     chooseColorButton.setFixedWidth(200);
     chooseColorButton.setStyleSheet("border: 1px solid white; border-radius: 50px; background-color: #FCA311");
 
-    // Création du bouton "Enregistrer"
     QPushButton enregistrerPseudo("Enregistrer Pseudo");
     enregistrerPseudo.setFixedWidth(200);
     enregistrerPseudo.setStyleSheet("border: 1px solid white; border-radius: 50px; background-color: #FCA311; color: #000000;");
 
-    // Création du bouton "Suivant"
     QPushButton suivantPseudo("Suivant");
     suivantPseudo.setFixedWidth(200);
     suivantPseudo.setStyleSheet("border: 1px solid white; border-radius: 50px; background-color: #FCA311");
@@ -396,31 +449,25 @@ int main(int argc, char *argv[])
     layoutPseudo.addWidget(&titlePseudo, 0, Qt::AlignVCenter | Qt::AlignHCenter);
     QHBoxLayout centerLayoutPseudo;
     centerLayoutPseudo.addWidget(&inputPseudo, 0, Qt::AlignHCenter | Qt::AlignVCenter);
-    centerLayoutPseudo.addWidget(&chooseColorButton, 0, Qt::AlignHCenter | Qt::AlignVCenter); // Ajout du bouton pour choisir la couleur
+    centerLayoutPseudo.addWidget(&chooseColorButton, 0, Qt::AlignHCenter | Qt::AlignVCenter);
     centerLayoutPseudo.addWidget(&enregistrerPseudo, 0, Qt::AlignHCenter | Qt::AlignVCenter);
     centerLayoutPseudo.addWidget(&suivantPseudo, 0, Qt::AlignHCenter | Qt::AlignVCenter);
     layoutPseudo.addLayout(&centerLayoutPseudo);
 
-    // Création du widget principal pour la page de choix du nombre de joueurs
     QWidget pagePseudo;
     pagePseudo.setLayout(&layoutPseudo);
     pagePseudo.setStyleSheet("background-color: #A6B9E2;");
 
-
-    // MISE EN PAGE JOUER DE PARTIE
     QVBoxLayout layoutTableau;
-    // Création du titre
     QLabel titleTableau("Jouer la partie");
     titleFont = titleTableau.font();
     titleFont.setPointSize(24);
     titleTableau.setFont(titleFont);
     titleTableau.setStyleSheet("color: #14213D;");
 
-    // Création du tableau pour afficher les données
-    QTableWidget tableauScore(0, 4); // 4 colonnes
-    tableauScore.setHorizontalHeaderLabels(QStringList() << "PSEUDO" << "PARTIE GAGNER" << "PARTIE PERDU" << "TOTAL POINT");
+    QTableWidget tableauScore(0, 5);
+    tableauScore.setHorizontalHeaderLabels(QStringList() << "PSEUDO" << "PARTIES GAGNEES" << "PARTIES PERDUES" << "EGALITES" << "TOTAL POINT");
 
-    // Création du bouton
     QPushButton suivantTableau("Suivant");
     suivantTableau.setFixedWidth(200);
     suivantTableau.setStyleSheet("border: 1px solid white; border-radius: 50px; background-color: #FCA311");
@@ -429,16 +476,14 @@ int main(int argc, char *argv[])
     layoutTableau.addWidget(&tableauScore, Qt::AlignVCenter | Qt::AlignHCenter);
     layoutTableau.addWidget(&suivantTableau, 0, Qt::AlignVCenter | Qt::AlignHCenter);
 
+    QStackedWidget stackedWidget;
 
-
-    // Création du widget principal pour la page de choix du temps de partie
     QWidget pageTableau;
     pageTableau.setLayout(&layoutTableau);
     pageTableau.setStyleSheet("background-color: #A6B9E2;");
 
     QGraphicsScene *scene = new QGraphicsScene();
 
-    //TSTTR
     QVBoxLayout layoutGame;
     for (int i = 0; i < COLS; ++i) {
         for (int j = 0; j < ROWS; ++j) {
@@ -464,38 +509,111 @@ int main(int argc, char *argv[])
         /*QObject::connect(&button, &QPushButton::clicked, []() {
         });*/
 
-        QObject::connect(button, &QPushButton::clicked, [i, scene]() {
+        QObject::connect(button, &QPushButton::clicked, [i, scene, &stackedWidget, &tableauScore]() {
             qDebug() << (i+1);
 
+            player1 = playersList[matchPlanning.at(nMatch).first];
+            player2 = playersList[matchPlanning.at(nMatch).second];
+
             if (tab[0][i] == 0) {
-                place(i);
-                refreshScene(scene);
+                if (place(i)) {
+                    player1.totalPoints += (w1 - w2);
+                    player2.totalPoints += (w2 - w1);
+                    if (w1 == 2 && w2 == 2) {
+                        player1.gamesEqualities += 1;
+                        player2.gamesEqualities += 1;
+                    }
+                    else if (w1 == 2) {
+                        player1.gamesWon += 1;
+                        player2.gamesLost += 1;
+                    }
+                    else if (w2 == 2){
+                        player1.gamesLost += 1;
+                        player2.gamesWon += 1;
+                    }
+
+                    tableauScore.setItem(matchPlanning.at(nMatch).first, 1, new QTableWidgetItem(QString::number(player1.gamesWon)));
+                    tableauScore.setItem(matchPlanning.at(nMatch).first, 2, new QTableWidgetItem(QString::number(player1.gamesLost)));
+                    tableauScore.setItem(matchPlanning.at(nMatch).first, 3, new QTableWidgetItem(QString::number(player1.gamesEqualities)));
+                    tableauScore.setItem(matchPlanning.at(nMatch).first, 4, new QTableWidgetItem(QString::number(player1.totalPoints)));
+
+                    for (int col = 1; col <= 4; ++col) {
+                        tableauScore.item(matchPlanning.at(nMatch).first, col)->setBackground(QBrush(player1.color));
+                    }
+
+                    tableauScore.setItem(matchPlanning.at(nMatch).second, 1, new QTableWidgetItem(QString::number(player2.gamesWon)));
+                    tableauScore.setItem(matchPlanning.at(nMatch).second, 2, new QTableWidgetItem(QString::number(player2.gamesLost)));
+                    tableauScore.setItem(matchPlanning.at(nMatch).second, 3, new QTableWidgetItem(QString::number(player2.gamesEqualities)));
+                    tableauScore.setItem(matchPlanning.at(nMatch).second, 4, new QTableWidgetItem(QString::number(player2.totalPoints)));
+
+                    for (int col = 1; col <= 4; ++col) {
+                        tableauScore.item(matchPlanning.at(nMatch).second, col)->setBackground(QBrush(player2.color));
+                    }
+
+                    //tableauScore.sortItems(4, Qt::AscendingOrder);
+
+                    nMatch += 1;
+
+                    resetGame();
+                    stackedWidget.setCurrentIndex(3);
+                }
+                else {
+                    refreshScene(scene);
+                }
             }
         });
     }
 
+    stackedWidget.addWidget(&pageNumberJoueur);
+    stackedWidget.addWidget(&pageTempPartie);
+    stackedWidget.addWidget(&pagePseudo);
+    stackedWidget.addWidget(&pageTableau);
 
-    // Création d'un QStackedWidget pour gérer les pages
-    QStackedWidget stackedWidget;
-    stackedWidget.addWidget(&pageNumberJoueur);  // Ajout de la page principale
-    stackedWidget.addWidget(&pageTempPartie);    // Ajout de la deuxième page
-    stackedWidget.addWidget(&pagePseudo);        // Ajout de la troisième page
-    stackedWidget.addWidget(&pageTableau);  // Ajout de la quatrième page
-
-    //TSTTR
     stackedWidget.addWidget(&pageGame);
 
-    stackedWidget.setCurrentWidget(&pageNumberJoueur);  // Définir la page principale comme étant celle affichée initialement
+    stackedWidget.setCurrentWidget(&pageNumberJoueur);
     stackedWidget.resize(700, 700);
     stackedWidget.setWindowTitle("Connect Four");
 
-    // Définir le style des boutons "Suivant" et "Enregistrer Pseudo" lorsque désactivés
     suivantPseudo.setStyleSheet("border: 1px solid white; border-radius: 50px; background-color: #E5E5E5; color: #000000;");
     suivantPseudo.setEnabled(false);
 
     enregistrerPseudo.setStyleSheet("border: 1px solid white; border-radius: 50px; background-color: #FCA311; color: #000000;");
     enregistrerPseudo.setEnabled(true);
-    int nextPlayerIndex = 0; // Variable pour suivre le numéro du prochain joueur
+    int nextPlayerIndex = 0;
+
+    /*QObject::connect(&timer, &QTimer::timeout, [&]() {
+        // Mettre à jour l'affichage du temps restant
+        labelTimer.setText(QString("Temps restant : %1:%2")
+                          .arg(minutes / 60, 2, 10, QLatin1Char('0'))
+                          .arg(minutes % 60, 2, 10, QLatin1Char('0')));
+        minutes--;
+
+        // Si le temps est écoulé
+        if (minutes < 0) {
+            // Arrêter le timer
+            timer.stop();
+            // Effectuer quelque chose ici lorsque le temps est écoulé
+            labelTimer.setText("Temps écoulé !");
+        }
+    });*/
+
+    QObject::connect(&comboBoxTempPartie, QOverload<int>::of(&QComboBox::currentIndexChanged), [&](int index) {
+        // Mettre à jour la valeur des minutes en fonction de la sélection
+        switch(index) {
+        case 0:
+            minutes = 3 * 60;
+            break;
+        case 1:
+            minutes = 5 * 60;
+            break;
+        case 2:
+            minutes = 10 * 60;
+            break;
+        default:
+            break;
+        }
+    });
 
     QObject::connect(&inputNumberJoueur, &QLineEdit::textChanged, [&suivantNumberJoueur](const QString &text) {
         if (text.isEmpty()) {
@@ -507,135 +625,135 @@ int main(int argc, char *argv[])
         }
     });
 
-    // Connecter le clic sur le bouton "Suivant" pour passer à la nouvelle page
     QObject::connect(&suivantNumberJoueur, &QPushButton::clicked, [&stackedWidget]() {
-        stackedWidget.setCurrentIndex(1);  // Passer à la deuxième page
+        stackedWidget.setCurrentIndex(1);
     });
 
-    // Connecter le clic sur le bouton "Suivant" pour passer à la pagePseudo
     QObject::connect(&suivantTempPartie, &QPushButton::clicked, [&stackedWidget]() {
-        stackedWidget.setCurrentIndex(2);  // Passer à la troisième page (index 2)
+        stackedWidget.setCurrentIndex(2);
     });
 
-    // Connecter le clic sur le bouton "Suivant" pour passer à la page suivante
     QObject::connect(&suivantPseudo, &QPushButton::clicked, [&stackedWidget]() {
-        stackedWidget.setCurrentIndex(3);  // Passer à la page suivante
+        stackedWidget.setCurrentIndex(3);
     });
 
-    QObject::connect(&suivantTableau, &QPushButton::clicked, [&stackedWidget]() {
+    QObject::connect(&suivantTableau, &QPushButton::clicked, [&stackedWidget, scene]() {
         stackedWidget.setCurrentIndex(4);
+        initGame(playersList[matchPlanning.at(nMatch).first], playersList[matchPlanning.at(nMatch).second]);
+        refreshScene(scene);
     });
 
-    // Connecter le clic sur le bouton pour choisir la couleur
     QObject::connect(&chooseColorButton, &QPushButton::clicked, [&inputPseudo, &pagePseudo, &playerInfoMap]() {
         QString pseudo = inputPseudo.text();
         QColor color = QColorDialog::getColor(Qt::white, &pagePseudo, "Choisissez une couleur");
 
         if (color.isValid()) {
-            // Mettre à jour la couleur du champ d'entrée du pseudo
             QString styleSheet = QString("border: 1px solid white; border-radius: 50px; color: %1").arg(color.name());
             inputPseudo.setStyleSheet(styleSheet);
 
-            // Enregistrer la couleur choisie pour ce pseudo dans la structure PlayerInfo
             PlayerInfo &playerInfo = playerInfoMap[pseudo];
             playerInfo.setColor(color);
         }
     });
     int totalPlayers = 0;
 
-    // Connecter le champ d'entrée du nombre de joueurs pour mettre à jour totalPlayers
     QObject::connect(&inputNumberJoueur, &QLineEdit::textChanged, [&totalPlayers, &suivantPseudo](const QString &text) {
         bool ok;
         int numPlayers = text.toInt(&ok);
-        if (ok && numPlayers > 0) {
+        if (ok && numPlayers > 1) {
             totalPlayers = numPlayers;
-            suivantPseudo.setEnabled(false); // Désactiver le bouton "Suivant" jusqu'à ce que tous les pseudos soient enregistrés
+            suivantPseudo.setEnabled(false);
         }
     });
-    // Connecter le clic sur le bouton "Suivant" pour passer à la pagePseudo
+
     QObject::connect(&suivantTempPartie, &QPushButton::clicked, [&stackedWidget]() {
-        stackedWidget.setCurrentIndex(2);  // Passer à la troisième page (index 2)
+        stackedWidget.setCurrentIndex(2);
     });
 
-    // Ajoutez une variable pour suivre le nombre de joueurs déjà ajoutés
-    //int playersAdded = 0;
-
-    // Connecter le clic sur le bouton "Enregistrer Pseudo"
-    // Connecter le clic sur le bouton "Enregistrer Pseudo"
     QObject::connect(&enregistrerPseudo, &QPushButton::clicked, [&layoutPseudo,&pseudoList, &inputPseudo, &nextPlayerIndex, &totalPlayers, &suivantPseudo, &enregistrerPseudo, &tableauScore, &playerInfoMap]() {
+
         if (pseudoList.size() >= totalPlayers) {
-            return; // Ne rien faire si le nombre maximal de pseudos est atteint
+            return;
         }
 
-        QString pseudo = inputPseudo.text(); // Récupérer le pseudo entré
+        QString pseudo = inputPseudo.text();
 
-        // Vérifier si le pseudo est vide ou s'il y a déjà suffisamment de pseudos
         if (pseudo.isEmpty() || pseudoList.size() >= totalPlayers) {
             return;
         }
 
-        // Création d'une instance de PlayerInfo et initialisation à zéro
         PlayerInfo playerInfo;
-        playerInfo.color = Qt::white; // Couleur par défaut
+        playerInfo.color = Qt::white;
         playerInfo.gamesWon = 0;
         playerInfo.gamesLost = 0;
+        playerInfo.gamesEqualities = 0;
         playerInfo.totalPoints = 0;
 
-        // Enregistrer la couleur choisie pour ce pseudo dans la structure PlayerInfo
         QColor pseudoColor = playerInfoMap[pseudo].color;
 
-        // Ajouter le pseudo à la liste
         pseudoList << pseudo;
 
-        // Ajouter le pseudo et ses informations à la QMap
+        playerInfo.pseudo = pseudo;
+
         playerInfoMap.insert(pseudo, playerInfo);
 
-        // Créer une étiquette pour le pseudo avec la couleur correspondante
         QLabel *labelPlayerPseudo = new QLabel(QString("Joueur %1 : %2").arg(nextPlayerIndex + 1).arg(pseudo));
-        labelPlayerPseudo->setStyleSheet(QString("QLabel { color: %1; padding: 5px 0; }").arg(pseudoColor.name())); // Ajuster l'espacement entre les lignes
+        labelPlayerPseudo->setStyleSheet(QString("QLabel { color: %1; padding: 5px 0; }").arg(pseudoColor.name()));
         layoutPseudo.addWidget(labelPlayerPseudo, 0, Qt::AlignHCenter | Qt::AlignVCenter);
 
-        // Incrémenter le numéro du prochain joueur
+        QString styleSheet = labelPlayerPseudo->styleSheet();
+        QRegularExpression regex("color:\\s*(.*?);");
+        QRegularExpressionMatch match = regex.match(styleSheet);
+        if (match.hasMatch()) {
+            QString textColorString = match.captured(1);
+            QColor textColor(textColorString);
+            playerInfo.color = textColor;
+        } else {
+            playerInfo.color = Qt::blue;
+        }
+
+        matchPlanning = generatePlanning(totalPlayers);
+
+        playersList.push_back(playerInfo);
+
         nextPlayerIndex++;
 
-        // Ajouter une ligne pour ce pseudo dans le tableau
         int row = tableauScore.rowCount();
         tableauScore.insertRow(row);
-        tableauScore.setItem(row, 0, new QTableWidgetItem(pseudo));
 
-        // Remplir les autres cellules avec les informations du joueur
+        QTableWidgetItem *pseudoItem = new QTableWidgetItem(pseudo);
         QTableWidgetItem *gamesWonItem = new QTableWidgetItem(QString::number(playerInfo.gamesWon));
         QTableWidgetItem *gamesLostItem = new QTableWidgetItem(QString::number(playerInfo.gamesLost));
+        QTableWidgetItem *gamesEqualitiesItem = new QTableWidgetItem(QString::number(playerInfo.gamesEqualities));
         QTableWidgetItem *totalPointsItem = new QTableWidgetItem(QString::number(playerInfo.totalPoints));
 
-        // Rendre les cellules non éditables
+        pseudoItem->setFlags(pseudoItem->flags() ^ Qt::ItemIsEditable);
         gamesWonItem->setFlags(gamesWonItem->flags() ^ Qt::ItemIsEditable);
         gamesLostItem->setFlags(gamesLostItem->flags() ^ Qt::ItemIsEditable);
+        gamesLostItem->setFlags(gamesEqualitiesItem->flags() ^ Qt::ItemIsEditable);
         totalPointsItem->setFlags(totalPointsItem->flags() ^ Qt::ItemIsEditable);
 
+        tableauScore.setItem(row, 0, pseudoItem);
         tableauScore.setItem(row, 1, gamesWonItem);
         tableauScore.setItem(row, 2, gamesLostItem);
-        tableauScore.setItem(row, 3, totalPointsItem);
+        tableauScore.setItem(row, 3, gamesEqualitiesItem);
+        tableauScore.setItem(row, 4, totalPointsItem);
 
-        // Définir la couleur de fond de toute la ligne avec la couleur du pseudo
-        for (int col = 0; col < 4; ++col) {
+        for (int col = 0; col < 5; ++col) {
             QTableWidgetItem *item = tableauScore.item(row, col);
             if (item) {
                 item->setBackground(pseudoColor);
             }
         }
 
-        // Vérifier si tous les pseudos ont été enregistrés
         if (pseudoList.size() == totalPlayers) {
             suivantPseudo.setStyleSheet("border: 1px solid white; border-radius: 50px; background-color: #FCA311; color: #000000;");
-            suivantPseudo.setEnabled(true); // Activer le bouton "Suivant" une fois que tous les pseudos sont enregistrés
+            suivantPseudo.setEnabled(true);
 
-            // Modifier le style du bouton "Enregistrer Pseudo" car tous les pseudos sont enregistrés
             enregistrerPseudo.setStyleSheet("border: 1px solid white; border-radius: 50px; background-color: #E5E5E5; color: #000000;");
-            enregistrerPseudo.setEnabled(false); // Désactiver le bouton "Enregistrer Pseudo"
+            enregistrerPseudo.setEnabled(false);
         }
 
-        // Effacer le texte dans le champ inputPseudo pour permettre à l'utilisateur d'entrer un nouveau pseudo
         inputPseudo.clear();
     });
 
@@ -646,7 +764,6 @@ int main(int argc, char *argv[])
     int y = (mainScreenSize.height() - stackedWidget.height()) / 2;
     stackedWidget.move(x, y);
 
-    // Afficher le widget principal
     stackedWidget.show();
 
     return app.exec();
