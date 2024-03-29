@@ -22,11 +22,24 @@
 #include <QDebug>
 #include <QMessageBox>
 
+#include <iostream>
+#include <vector>
+#include <unordered_set>
+#include <utility>
+
+#include <iostream>
+#include <vector>
+#include <algorithm>
+#include <random>
+using namespace std;
+
 //#include "mainwindow.h"
 struct PlayerInfo {
+    QString pseudo;
     QColor color;
     int gamesWon;
     int gamesLost;
+    int gamesEqualities;
     int totalPoints;
 
     // Méthode pour définir la couleur
@@ -42,6 +55,9 @@ const int cellSize = 50;
 
 int tab[ROWS][COLS];
 
+int player1;
+int player2;
+
 int idPlayer = 1;
 
 int t1 = 21;
@@ -51,6 +67,31 @@ int w1 = 0;
 int w2 = 0;
 
 int rnd = 1;
+
+vector<pair<int, int>> matchPlanning;
+
+QColor colorJ1 = (Qt::blue);
+QColor colorJ2 = (Qt::red);
+
+std::vector<PlayerInfo> playersList;
+
+vector<pair<int, int>> generatePlanning(int n) {
+    vector<pair<int, int>> pairs;
+    for (int i = 0; i < n; ++i) {
+        for (int j = i+1; j < n; ++j) {
+            pairs.push_back(make_pair(i, j));
+        }
+    }
+    random_device rd;
+    mt19937 g(rd());
+    shuffle(pairs.begin(), pairs.end(), g);
+    return pairs;
+}
+
+void initGame(PlayerInfo p1, PlayerInfo p2) {
+    colorJ1 = p1.color;
+    colorJ2 = p2.color;
+}
 
 void reset() {
     t1 = 21;
@@ -68,11 +109,12 @@ void refreshScene(QGraphicsScene *scene) {
         for (int j = 0; j < COLS; ++j) {
             if(tab[i][j] == 1) {
                 QGraphicsEllipseItem *circle = new QGraphicsEllipseItem(j * cellSize, i * cellSize, cellSize, cellSize);
-                circle->setBrush(QBrush(Qt::blue));
+                circle->setBrush(QBrush(colorJ1));
+                qDebug() << colorJ1;
                 scene->addItem(circle);
             } else if (tab[i][j] == 2) {
                 QGraphicsEllipseItem *circle = new QGraphicsEllipseItem(j * cellSize, i * cellSize, cellSize, cellSize);
-                circle->setBrush(QBrush(Qt::red));
+                circle->setBrush(QBrush(colorJ2));
                 scene->addItem(circle);
             }
             else {
@@ -86,11 +128,11 @@ void refreshScene(QGraphicsScene *scene) {
     int circleSpacing = 20;
 
     QGraphicsEllipseItem *leftCircle = new QGraphicsEllipseItem(-cellSize - circleSpacing, ROWS * cellSize / 2 - cellSize / 2, cellSize, cellSize);
-    leftCircle->setBrush(QBrush(Qt::blue));
+    leftCircle->setBrush(QBrush(colorJ1));
     scene->addItem(leftCircle);
 
     QGraphicsEllipseItem *rightCircle = new QGraphicsEllipseItem(COLS * cellSize + circleSpacing, ROWS * cellSize / 2 - cellSize / 2, cellSize, cellSize);
-    rightCircle->setBrush(QBrush(Qt::red));
+    rightCircle->setBrush(QBrush(colorJ2));
     scene->addItem(rightCircle);
 
     QFont boldFont("Arial", 12, QFont::Bold);
@@ -108,11 +150,11 @@ void refreshScene(QGraphicsScene *scene) {
     scene->addItem(textRightCircle);
 
     QGraphicsEllipseItem *topLeftCircle1 = new QGraphicsEllipseItem(0, -2*cellSize - circleSpacing, cellSize - 2, cellSize - 2);
-    topLeftCircle1->setBrush(QBrush(Qt::blue));
+    topLeftCircle1->setBrush(QBrush(colorJ1));
     scene->addItem(topLeftCircle1);
 
     QGraphicsEllipseItem *topLeftCircle2 = new QGraphicsEllipseItem(cellSize, -2*cellSize - circleSpacing, cellSize - 2, cellSize - 2);
-    topLeftCircle2->setBrush(QBrush(Qt::blue));
+    topLeftCircle2->setBrush(QBrush(colorJ1));
     scene->addItem(topLeftCircle2);
 
     QGraphicsEllipseItem *topLeftCircle1bis = nullptr;
@@ -144,11 +186,11 @@ void refreshScene(QGraphicsScene *scene) {
     }
 
     QGraphicsEllipseItem *topRightCircle1 = new QGraphicsEllipseItem((COLS-1) * cellSize, -2*cellSize - circleSpacing, cellSize - 2, cellSize - 2);
-    topRightCircle1->setBrush(QBrush(Qt::red));
+    topRightCircle1->setBrush(QBrush(colorJ2));
     scene->addItem(topRightCircle1);
 
     QGraphicsEllipseItem *topRightCircle2 = new QGraphicsEllipseItem((COLS-2) * cellSize, -2*cellSize - circleSpacing, cellSize - 2, cellSize - 2);
-    topRightCircle2->setBrush(QBrush(Qt::red));
+    topRightCircle2->setBrush(QBrush(colorJ2));
     scene->addItem(topRightCircle2);
 
     QGraphicsEllipseItem *topRightCircle1bis = nullptr;
@@ -266,7 +308,7 @@ bool place(int column) {
         msgBox.exec();
         rnd++;
         if (w1 == 2 || w2 == 2) {
-
+            return true;
         }
         else {
             reset();
@@ -282,7 +324,7 @@ bool place(int column) {
         msgBox.exec();
         rnd++;
         if (w1 == 2 || w2 == 2) {
-
+            return true;
         }
         else {
             reset();
@@ -295,7 +337,7 @@ bool place(int column) {
         idPlayer = (idPlayer == 1) ? 2 : 1;
     }
 
-    return isVictory(ROWS - 1 - i, column);
+    return false;
 }
 
 int main(int argc, char *argv[])
@@ -427,8 +469,8 @@ int main(int argc, char *argv[])
     titleTableau.setStyleSheet("color: #14213D;");
 
     // Création du tableau pour afficher les données
-    QTableWidget tableauScore(0, 4); // 4 colonnes
-    tableauScore.setHorizontalHeaderLabels(QStringList() << "PSEUDO" << "PARTIES GAGNEES" << "PARTIES PERDUES" << "TOTAL POINT");
+    QTableWidget tableauScore(0, 5); // 4 colonnes
+    tableauScore.setHorizontalHeaderLabels(QStringList() << "PSEUDO" << "PARTIES GAGNEES" << "PARTIES PERDUES" << "EGALITES" << "TOTAL POINT");
 
     // Création du bouton
     QPushButton suivantTableau("Suivant");
@@ -439,7 +481,7 @@ int main(int argc, char *argv[])
     layoutTableau.addWidget(&tableauScore, Qt::AlignVCenter | Qt::AlignHCenter);
     layoutTableau.addWidget(&suivantTableau, 0, Qt::AlignVCenter | Qt::AlignHCenter);
 
-
+    QStackedWidget stackedWidget;
 
     // Création du widget principal pour la page de choix du temps de partie
     QWidget pageTableau;
@@ -474,19 +516,51 @@ int main(int argc, char *argv[])
         /*QObject::connect(&button, &QPushButton::clicked, []() {
         });*/
 
-        QObject::connect(button, &QPushButton::clicked, [i, scene]() {
+        QObject::connect(button, &QPushButton::clicked, [i, scene, &stackedWidget, &tableauScore]() {
             qDebug() << (i+1);
 
             if (tab[0][i] == 0) {
-                place(i);
-                refreshScene(scene);
+                if (place(i)) {
+                    playersList[0].totalPoints += (w1 - w2);
+                    playersList[1].totalPoints += (w2 - w1);
+                    if (w1 == 2 && w2 == 2) {
+                        playersList[0].gamesEqualities += 1;
+                        playersList[1].gamesEqualities += 1;
+                    }
+                    else if (w1 == 2) {
+                        playersList[0].gamesWon += 1;
+                        playersList[1].gamesLost += 1;
+                    }
+                    else {
+                        playersList[0].gamesLost += 1;
+                        playersList[1].gamesWon += 1;
+                    }
+
+                    for (int row = 0; row < playersList.size(); ++row) {
+                        tableauScore.setItem(row, 1, new QTableWidgetItem(QString::number(playersList[row].gamesWon)));
+                        tableauScore.setItem(row, 2, new QTableWidgetItem(QString::number(playersList[row].gamesLost)));
+                        tableauScore.setItem(row, 3, new QTableWidgetItem(QString::number(playersList[row].gamesEqualities)));
+                        tableauScore.setItem(row, 4, new QTableWidgetItem(QString::number(playersList[row].totalPoints)));
+
+                        for (int col = 1; col <= 4; ++col) {
+                            tableauScore.item(row, col)->setBackground(QBrush(playersList[row].color));
+                        }
+                    }
+
+                    tableauScore.sortItems(4, Qt::AscendingOrder);
+
+                    stackedWidget.setCurrentIndex(3);
+                }
+                else {
+                    refreshScene(scene);
+                }
             }
         });
     }
 
 
     // Création d'un QStackedWidget pour gérer les pages
-    QStackedWidget stackedWidget;
+    //QStackedWidget stackedWidget;
     stackedWidget.addWidget(&pageNumberJoueur);  // Ajout de la page principale
     stackedWidget.addWidget(&pageTempPartie);    // Ajout de la deuxième page
     stackedWidget.addWidget(&pagePseudo);        // Ajout de la troisième page
@@ -534,6 +608,7 @@ int main(int argc, char *argv[])
 
     QObject::connect(&suivantTableau, &QPushButton::clicked, [&stackedWidget, scene]() {
         stackedWidget.setCurrentIndex(4);
+        initGame(playersList[0], playersList[1]);
         refreshScene(scene);
     });
 
@@ -558,7 +633,7 @@ int main(int argc, char *argv[])
     QObject::connect(&inputNumberJoueur, &QLineEdit::textChanged, [&totalPlayers, &suivantPseudo](const QString &text) {
         bool ok;
         int numPlayers = text.toInt(&ok);
-        if (ok && numPlayers > 0) {
+        if (ok && numPlayers > 1) {
             totalPlayers = numPlayers;
             suivantPseudo.setEnabled(false); // Désactiver le bouton "Suivant" jusqu'à ce que tous les pseudos soient enregistrés
         }
@@ -574,6 +649,10 @@ int main(int argc, char *argv[])
     // Connecter le clic sur le bouton "Enregistrer Pseudo"
     // Connecter le clic sur le bouton "Enregistrer Pseudo"
     QObject::connect(&enregistrerPseudo, &QPushButton::clicked, [&layoutPseudo,&pseudoList, &inputPseudo, &nextPlayerIndex, &totalPlayers, &suivantPseudo, &enregistrerPseudo, &tableauScore, &playerInfoMap]() {
+
+        //PlayerInfo players[totalPlayers];
+
+
         if (pseudoList.size() >= totalPlayers) {
             return; // Ne rien faire si le nombre maximal de pseudos est atteint
         }
@@ -590,6 +669,7 @@ int main(int argc, char *argv[])
         playerInfo.color = Qt::white; // Couleur par défaut
         playerInfo.gamesWon = 0;
         playerInfo.gamesLost = 0;
+        playerInfo.gamesEqualities = 0;
         playerInfo.totalPoints = 0;
 
         // Enregistrer la couleur choisie pour ce pseudo dans la structure PlayerInfo
@@ -598,13 +678,32 @@ int main(int argc, char *argv[])
         // Ajouter le pseudo à la liste
         pseudoList << pseudo;
 
+        playerInfo.pseudo = pseudo;
+
         // Ajouter le pseudo et ses informations à la QMap
         playerInfoMap.insert(pseudo, playerInfo);
 
-        // Créer une étiquette pour le pseudo avec la couleur correspondante
         QLabel *labelPlayerPseudo = new QLabel(QString("Joueur %1 : %2").arg(nextPlayerIndex + 1).arg(pseudo));
         labelPlayerPseudo->setStyleSheet(QString("QLabel { color: %1; padding: 5px 0; }").arg(pseudoColor.name())); // Ajuster l'espacement entre les lignes
         layoutPseudo.addWidget(labelPlayerPseudo, 0, Qt::AlignHCenter | Qt::AlignVCenter);
+
+        // Obtention de la couleur du texte à partir de la feuille de style
+        QString styleSheet = labelPlayerPseudo->styleSheet();
+        QRegularExpression regex("color:\\s*(.*?);"); // Expression régulière pour extraire la couleur du texte
+        QRegularExpressionMatch match = regex.match(styleSheet);
+        if (match.hasMatch()) {
+            QString textColorString = match.captured(1);
+            QColor textColor(textColorString);
+            playerInfo.color = textColor;
+        } else {
+            playerInfo.color = Qt::blue;
+        }
+
+        matchPlanning = generatePlanning(totalPlayers);
+
+        //players[nextPlayerIndex] = playerInfo;
+
+        playersList.push_back(playerInfo);
 
         // Incrémenter le numéro du prochain joueur
         nextPlayerIndex++;
@@ -612,24 +711,30 @@ int main(int argc, char *argv[])
         // Ajouter une ligne pour ce pseudo dans le tableau
         int row = tableauScore.rowCount();
         tableauScore.insertRow(row);
-        tableauScore.setItem(row, 0, new QTableWidgetItem(pseudo));
+        //tableauScore.setItem(row, 0, new QTableWidgetItem(pseudo));
 
         // Remplir les autres cellules avec les informations du joueur
+        QTableWidgetItem *pseudoItem = new QTableWidgetItem(pseudo);
         QTableWidgetItem *gamesWonItem = new QTableWidgetItem(QString::number(playerInfo.gamesWon));
         QTableWidgetItem *gamesLostItem = new QTableWidgetItem(QString::number(playerInfo.gamesLost));
+        QTableWidgetItem *gamesEqualitiesItem = new QTableWidgetItem(QString::number(playerInfo.gamesEqualities));
         QTableWidgetItem *totalPointsItem = new QTableWidgetItem(QString::number(playerInfo.totalPoints));
 
         // Rendre les cellules non éditables
+        pseudoItem->setFlags(pseudoItem->flags() ^ Qt::ItemIsEditable);
         gamesWonItem->setFlags(gamesWonItem->flags() ^ Qt::ItemIsEditable);
         gamesLostItem->setFlags(gamesLostItem->flags() ^ Qt::ItemIsEditable);
+        gamesLostItem->setFlags(gamesEqualitiesItem->flags() ^ Qt::ItemIsEditable);
         totalPointsItem->setFlags(totalPointsItem->flags() ^ Qt::ItemIsEditable);
 
+        tableauScore.setItem(row, 0, pseudoItem);
         tableauScore.setItem(row, 1, gamesWonItem);
         tableauScore.setItem(row, 2, gamesLostItem);
-        tableauScore.setItem(row, 3, totalPointsItem);
+        tableauScore.setItem(row, 3, gamesEqualitiesItem);
+        tableauScore.setItem(row, 4, totalPointsItem);
 
         // Définir la couleur de fond de toute la ligne avec la couleur du pseudo
-        for (int col = 0; col < 4; ++col) {
+        for (int col = 0; col < 5; ++col) {
             QTableWidgetItem *item = tableauScore.item(row, col);
             if (item) {
                 item->setBackground(pseudoColor);
