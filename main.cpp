@@ -261,10 +261,11 @@ bool place(int column) {
         w2 = (idPlayer == 2) ? ++w2 : w2;
         QMessageBox msgBox;
         msgBox.setWindowTitle(QString::number(rnd));
-        msgBox.setText("Congratulation !");
+        msgBox.setText(" Bravo !"+QString::number(idPlayer));
         msgBox.resize(400, 200);
         msgBox.exec();
         reset();
+        rnd+=1;
     }
     else if (t2 == 0){
         QMessageBox msgBox;
@@ -275,6 +276,7 @@ bool place(int column) {
         msgBox.resize(400, 200);
         msgBox.exec();
         reset();
+        rnd+=1;
     }
     else {
         t1 = (idPlayer == 1) ? --t1 : t1;
